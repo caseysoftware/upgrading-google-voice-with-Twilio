@@ -43,41 +43,92 @@ function is_allowed_adv($number, $starttime = 9, $endtime = 17)
     return false;
 }
 
+class Permissions
+{
+    protected $_file_db;
+
+    public function __construct() {
+        $this->_file_db = new PDO('sqlite:messaging.sqlite3');
+        $this->_file_db->exec("CREATE TABLE IF NOT EXISTS lists (
+                            id INTEGER PRIMARY KEY,
+                            number TEXT,
+                            type TEXT,
+                            name TEXT,
+                            time INTEGER)");
+    }
+
+    public function initDB()
+    {
+        return $this->_file_db;
+    }
+
+    public function onWhitelist($number)
+    {
+        $file_db = $this->_file_db;
+        $select = "SELECT * FROM lists WHERE number = :number AND type LIKE '%:list%'";
+        $stmt = $file_db->prepare($select);
+        $stmt->bindValue(':number', $number, SQLITE3_TEXT);
+        $stmt->bindValue(':list', 'white', SQLITE3_TEXT);
+        $stmt->execute();
+        $result = $stmt->fetchAll();
+
+        return (count($result)) ? true : false;
+    }
+
+    public function onBlacklist($number)
+    {
+        $file_db = $this->_file_db;
+        $select = "SELECT * FROM lists WHERE number = :number AND type LIKE '%:list%'";
+        $stmt = $file_db->prepare($select);
+        $stmt->bindValue(':number', $number, SQLITE3_TEXT);
+        $stmt->bindValue(':list', 'black', SQLITE3_TEXT);
+        $stmt->execute();
+        $result = $stmt->fetchAll();
+
+        return (count($result)) ? true : false;
+    }
+
+    public function removeNumber($number)
+    {
+        $file_db = $this->_file_db;
+        $delete = "DELETE FROM lists WHERE number = :number";
+        $stmt = $file_db->prepare($delete);
+        $stmt->bindValue(':number', $number, SQLITE3_TEXT);
+
+        return $stmt->execute();
+    }
+
+    public function updateList($number, $list_type)
+    {
+        $file_db = $this->_file_db;
+        $this->removeNumber($number);
+
+        $insert = "INSERT INTO lists (number, type, time) VALUES (:number, :type, :time)";
+        $stmt = $file_db->prepare($insert);
+        $stmt->bindValue(':number', $number, SQLITE3_TEXT);
+        $stmt->bindValue(':type',   $list_type, SQLITE3_TEXT);
+        $stmt->bindValue(':time',   time(), SQLITE3_TEXT);
+
+        return $stmt->execute();
+    }
+}
+
 function initDB()
 {
-    $file_db = new PDO('sqlite:messaging.sqlite3');
-    $file_db->exec("CREATE TABLE IF NOT EXISTS lists (
-                    id INTEGER PRIMARY KEY,
-                    number TEXT,
-                    type TEXT,
-                    name TEXT,
-                    time INTEGER)");
-
-    return $file_db;
+    $perms = new Permissions();
+    return $perms->initDB();
 }
 
 function onWhitelist($number)
 {
-    $file_db = initDB();
-    $select = "SELECT * FROM lists WHERE number = :number AND type LIKE '%white%'";
-    $stmt = $file_db->prepare($select);
-    $stmt->bindValue(':number', $number, SQLITE3_TEXT);
-    $stmt->execute();
-    $result = $stmt->fetchAll();
-
-    return (count($result)) ? true : false;
+    $perms = new Permissions();
+    return $perms->onWhitelist($number);
 }
 
 function onBlacklist($number)
 {
-    $file_db = initDB();
-    $select = "SELECT * FROM lists WHERE number = :number AND type LIKE '%black%'";
-    $stmt = $file_db->prepare($select);
-    $stmt->bindValue(':number', $number, SQLITE3_TEXT);
-    $stmt->execute();
-    $result = $stmt->fetchAll();
-
-    return (count($result)) ? true : false;
+    $perms = new Permissions();
+    return $perms->onBlacklist($number);
 }
 
 function find_in_list($number)
@@ -101,26 +152,14 @@ function find_in_list($number)
 
 function remove_number($number)
 {
-    $file_db = initDB();
-    $delete = "DELETE FROM lists WHERE number = :number";
-    $stmt = $file_db->prepare($delete);
-    $stmt->bindValue(':number', $number, SQLITE3_TEXT);
-
-    return $stmt->execute();
+    $perms = new Permissions();
+    return $perms->removeNumber($number);
 }
 
 function update_list($number, $list_type)
 {
-    $file_db = initDB();
-    remove_number($number);
-
-    $insert = "INSERT INTO lists (number, type, time) VALUES (:number, :type, :time)";
-    $stmt = $file_db->prepare($insert);
-    $stmt->bindValue(':number', $number, SQLITE3_TEXT);
-    $stmt->bindValue(':type',   $list_type, SQLITE3_TEXT);
-    $stmt->bindValue(':time',   time(), SQLITE3_TEXT);
-
-    return $stmt->execute();
+    $perms = new Permissions();
+    return $perms->updateList($number, $list_type);
 }
 
 function process_command($message)
