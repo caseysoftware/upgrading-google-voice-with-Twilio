@@ -28,10 +28,12 @@ function is_allowed($number, $whitelist = array(), $starttime = 9, $endtime = 17
 
 function is_allowed_adv($number, $starttime = 9, $endtime = 17)
 {
-    if (onWhitelist($number)) {
+    $perms = new Permissions();
+
+    if ($perms->onWhitelist($number)) {
         return true;
     }
-    if (onBlacklist($number)) {
+    if ($perms->onBlacklist($number)) {
         return false;
     }
 
@@ -113,29 +115,13 @@ class Permissions
     }
 }
 
-function initDB()
-{
-    $perms = new Permissions();
-    return $perms->initDB();
-}
-
-function onWhitelist($number)
-{
-    $perms = new Permissions();
-    return $perms->onWhitelist($number);
-}
-
-function onBlacklist($number)
-{
-    $perms = new Permissions();
-    return $perms->onBlacklist($number);
-}
-
 function find_in_list($number)
 {
+    $perms = new Permissions();
+    $file_db = $perms->initDB();
+
     $type = '';
 
-    $file_db = initDB();
     $select = "SELECT * FROM lists WHERE number = :number";
     $stmt = $file_db->prepare($select);
     $stmt->bindValue(':number', $number, SQLITE3_TEXT);
@@ -150,18 +136,6 @@ function find_in_list($number)
     return $type;
 }
 
-function remove_number($number)
-{
-    $perms = new Permissions();
-    return $perms->removeNumber($number);
-}
-
-function update_list($number, $list_type)
-{
-    $perms = new Permissions();
-    return $perms->updateList($number, $list_type);
-}
-
 function process_command($message)
 {
     $words = explode(' ', $message);
@@ -173,20 +147,22 @@ function process_command($message)
 
     $command = $words[0];
     $number  = preg_replace("/[^0-9]/", "", $words[1]);
-    
+
+    $perms = new Permissions();
+
     switch($command) {
         case 'allow':       // add to whitelist
-            $result = update_list($number, 'white');
+            $result = $perms->updateList($number, 'white');
             $response = ($result) ? "$number has been added to your whitelist" :
                 "An error has occured adding $number to your whitelist";
             break;
         case 'block':       // add to blacklist
-            $result = update_list($number, 'black');
+            $result = $perms->updateList($number, 'black');
             $response = ($result) ? "$number has been added to your blacklist" :
                 "An error has occured adding $number to your blacklist";
             break;
         case 'remove':      // remove from either list
-            $result = remove_number($number);
+            $result = $perms->removeNumber($number);
             $response = ($result) ? "$number has been removed from your lists" :
                 "An error has occured removing $number from your lists";
             break;
