@@ -1,5 +1,8 @@
 <?php
 
+include 'creds.php';
+include 'vendor/autoload.php';
+
 /**
  * This is how we determine who is allowed to call through and when.
  *

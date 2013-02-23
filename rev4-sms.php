@@ -1,7 +1,5 @@
 <?php
 
-include 'creds.php';
-include 'vendor/autoload.php';
 include 'functions.php';
 
 /**

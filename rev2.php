@@ -1,7 +1,6 @@
 <?php
 
-include 'creds.php';
-include 'vendor/autoload.php';
+include 'functions.php';
 
 header("Content-type: text/xml");
 
