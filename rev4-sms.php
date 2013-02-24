@@ -13,6 +13,8 @@ $body = preg_replace("/[^a-z0-9\ ]/", "", trim(strtolower($_POST['Body'])));
 $message = process_command($body);
 
 $response = new Services_Twilio_Twiml();
-$response->sms($message);
+if ($toPhone == $from) {
+    $response->sms($message);
+}
 
 print $response;

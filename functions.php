@@ -51,6 +51,7 @@ class Permissions
 
     public function __construct() {
         $this->_file_db = new PDO('sqlite:messaging.sqlite3');
+        $this->_file_db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $this->_file_db->exec("CREATE TABLE IF NOT EXISTS lists (
                             id INTEGER PRIMARY KEY,
                             number TEXT,
@@ -67,11 +68,11 @@ class Permissions
     public function onWhitelist($number)
     {
         $file_db = $this->_file_db;
-        $select = "SELECT * FROM lists WHERE number = :number AND type LIKE '%:list%'";
+        $select = "SELECT * FROM lists WHERE number = ':number' AND type = 'white'";
         $stmt = $file_db->prepare($select);
         $stmt->bindValue(':number', $number, SQLITE3_TEXT);
-        $stmt->bindValue(':list', 'white', SQLITE3_TEXT);
         $stmt->execute();
+
         $result = $stmt->fetchAll();
 
         return (count($result)) ? true : false;
@@ -80,10 +81,9 @@ class Permissions
     public function onBlacklist($number)
     {
         $file_db = $this->_file_db;
-        $select = "SELECT * FROM lists WHERE number = :number AND type LIKE '%:list%'";
+        $select = "SELECT * FROM lists WHERE number = ':number' AND type = 'black'";
         $stmt = $file_db->prepare($select);
         $stmt->bindValue(':number', $number, SQLITE3_TEXT);
-        $stmt->bindValue(':list', 'black', SQLITE3_TEXT);
         $stmt->execute();
         $result = $stmt->fetchAll();
 
@@ -138,7 +138,9 @@ function find_in_list($number)
 
 function process_command($message)
 {
+    $message = preg_replace('!\s+!', ' ', $message);
     $words = explode(' ', $message);
+
     $response = "Unknown command. Use: allow, block, remove, status, or name with a phone number to manage your lists";
 
     if (2 > count($words)) {
